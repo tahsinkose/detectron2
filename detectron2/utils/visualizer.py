@@ -17,7 +17,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks, RotatedBoxes
 from detectron2.utils.file_io import PathManager
 
-from .colormap import random_color
+from .colormap import random_color, color_blue
 
 logger = logging.getLogger(__name__)
 
@@ -421,7 +421,7 @@ class Visualizer:
                     else None
                 )
             )
-            alpha = 0.3
+            alpha = 0.0
 
         self.overlay_instances(
             masks=masks,
@@ -661,7 +661,7 @@ class Visualizer:
         if labels is not None:
             assert len(labels) == num_instances
         if assigned_colors is None:
-            assigned_colors = [random_color(rgb=True, maximum=1) for _ in range(num_instances)]
+            assigned_colors = [color_blue(rgb=True, maximum=1) for _ in range(num_instances)]
         if num_instances == 0:
             return self.output
         if boxes is not None and boxes.shape[1] == 5:
@@ -763,7 +763,7 @@ class Visualizer:
         num_instances = len(boxes)
 
         if assigned_colors is None:
-            assigned_colors = [random_color(rgb=True, maximum=1) for _ in range(num_instances)]
+            assigned_colors = [color_blue(rgb=True, maximum=1) for _ in range(num_instances)]
         if num_instances == 0:
             return self.output
 

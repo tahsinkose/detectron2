@@ -122,7 +122,11 @@ def random_color(rgb=False, maximum=255):
     if not rgb:
         ret = ret[::-1]
     return ret
-
+def color_blue(rgb=False, maximum=255):
+    ret = np.array([0, 0, 1])*maximum
+    if not rgb:
+        ret = ret[::-1]
+    return ret
 
 if __name__ == "__main__":
     import cv2

@@ -305,6 +305,8 @@ class COCOEvaluator(DatasetEvaluator):
                 stats = _evaluate_box_proposals(predictions, self._coco_api, area=area, limit=limit)
                 key = "AR{}@{:d}".format(suffix, limit)
                 res[key] = float(stats["ar"].item() * 100)
+                kkey = "AR50@{:d}".format(limit)
+                res[kkey] = float(stats["recalls"][0] * 100)
         self._logger.info("Proposal metrics: \n" + create_small_table(res))
         self._results["box_proposals"] = res
 
@@ -479,8 +481,9 @@ def _evaluate_box_proposals(dataset_predictions, coco_api, thresholds=None, area
 
         # sort predictions in descending order
         # TODO maybe remove this and make it explicit in the documentation
-        inds = predictions.objectness_logits.sort(descending=True)[1]
-        predictions = predictions[inds]
+        if predictions.objectness_logits is not None:
+            inds = predictions.objectness_logits.sort(descending=True)[1]
+            predictions = predictions[inds]
 
         ann_ids = coco_api.getAnnIds(imgIds=prediction_dict["image_id"])
         anno = coco_api.loadAnns(ann_ids)
