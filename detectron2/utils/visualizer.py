@@ -17,7 +17,7 @@ from detectron2.data import MetadataCatalog
 from detectron2.structures import BitMasks, Boxes, BoxMode, Keypoints, PolygonMasks, RotatedBoxes
 from detectron2.utils.file_io import PathManager
 
-from .colormap import random_color, color_blue
+from .colormap import random_color, color_blue, color_red
 
 logger = logging.getLogger(__name__)
 
@@ -421,7 +421,7 @@ class Visualizer:
                     else None
                 )
             )
-            alpha = 0.0
+            alpha = 0.3
 
         self.overlay_instances(
             masks=masks,
@@ -431,6 +431,30 @@ class Visualizer:
             assigned_colors=colors,
             alpha=alpha,
         )
+        return self.output
+
+    def draw_rectangular_hull(self, predictions):
+        boxes = predictions.pred_boxes if predictions.has("pred_boxes") else None
+        if boxes is None:
+            return
+        boxes = self._convert_boxes(boxes)
+        num_instances = len(boxes)
+        import sys
+        min_x = sys.maxsize
+        min_y = sys.maxsize
+        max_x = 0
+        max_y = 0
+        for i in range(num_instances):
+            x0, y0, x1, y1 = boxes[i]
+            if x0 < min_x:
+                min_x = x0
+            if y0 < min_y:
+                min_y = y0
+            if x1 > max_x:
+                max_x = x1
+            if y1 > max_y:
+                max_y = y1
+        self.draw_box((min_x, min_y, max_x, max_y), alpha=1.0, edge_color='darkgreen', line_width=12)
         return self.output
 
     def draw_sem_seg(self, sem_seg, area_threshold=None, alpha=0.8):
@@ -535,7 +559,7 @@ class Visualizer:
 
     draw_panoptic_seg_predictions = draw_panoptic_seg  # backward compatibility
 
-    def draw_dataset_dict(self, dic):
+    def draw_dataset_dict(self, dic, draw_masks = True):
         """
         Draw annotations/segmentaions in Detectron2 Dataset format.
 
@@ -547,7 +571,7 @@ class Visualizer:
         """
         annos = dic.get("annotations", None)
         if annos:
-            if "segmentation" in annos[0]:
+            if "segmentation" in annos[0] and draw_masks:
                 masks = [x["segmentation"] for x in annos]
             else:
                 masks = None
@@ -563,14 +587,15 @@ class Visualizer:
                 else x["bbox"]
                 for x in annos
             ]
-
-            colors = None
             category_ids = [x["category_id"] for x in annos]
             if self._instance_mode == ColorMode.SEGMENTATION and self.metadata.get("thing_colors"):
                 colors = [
                     self._jitter([x / 255 for x in self.metadata.thing_colors[c]])
                     for c in category_ids
                 ]
+            else:
+                colors = [color_red(rgb=True, maximum=1)
+                          for _ in range(len(self._convert_boxes(boxes)))]
             names = self.metadata.get("thing_classes", None)
             labels = _create_text_labels(
                 category_ids,
@@ -893,7 +918,7 @@ class Visualizer:
         )
         return self.output
 
-    def draw_box(self, box_coord, alpha=0.5, edge_color="g", line_style="-"):
+    def draw_box(self, box_coord, alpha=0.5, edge_color="g", line_style="-", line_width = None):
         """
         Args:
             box_coord (tuple): a tuple containing x0, y0, x1, y1 coordinates, where x0 and y0
@@ -910,9 +935,11 @@ class Visualizer:
         x0, y0, x1, y1 = box_coord
         width = x1 - x0
         height = y1 - y0
-
-        linewidth = max(self._default_font_size / 4, 1)
-
+        if line_width is None:
+            linewidth = max(self._default_font_size / 4, 1)
+            linewidth * self.output.scale
+        else:
+            linewidth = line_width
         self.output.ax.add_patch(
             mpl.patches.Rectangle(
                 (x0, y0),
@@ -920,7 +947,7 @@ class Visualizer:
                 height,
                 fill=False,
                 edgecolor=edge_color,
-                linewidth=linewidth * self.output.scale,
+                linewidth=linewidth,
                 alpha=alpha,
                 linestyle=line_style,
             )
